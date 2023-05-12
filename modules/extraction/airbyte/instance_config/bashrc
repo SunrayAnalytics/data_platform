@@ -1,0 +1,25 @@
+#
+# Copyright (c) 2023. Sunray Analytics Ltd. All rights reserved
+#
+aws secretsmanager get-secret-value --secret-id ${DB_CREDENTIALS_ARN} --region ${AWS_REGION} \
+   | jq .SecretString \
+   | sed 's/^"\(.*\)"$/\1/' \
+   | sed 's/\\"/"/g' \
+   | jq '.' > .dbcredentials
+
+
+export AWS_REGION=${AWS_REGION}
+export AWSLOGS_GROUP=${AWSLOGS_GROUP}
+
+export DATABASE_USER=$(jq -r '.username' .dbcredentials )
+export DATABASE_PASSWORD=$(jq -r '.password' .dbcredentials)
+export DATABASE_HOST=$(jq -r '.host' .dbcredentials)
+export DATABASE_PORT=$(jq -r '.port' .dbcredentials)
+export DATABASE_DB=airbyte
+export DATABASE_URL="jdbc:postgresql://$(jq -r '.host' .dbcredentials):$(jq -r '.port' .dbcredentials)/airbyte"
+
+# TODO Get airbyte credentials here as well
+export BASIC_AUTH_USERNAME=admin
+export BASIC_AUTH_PASSWORD=secret
+
+rm .dbcredentials

@@ -1,0 +1,39 @@
+#
+# Copyright (c) 2023. Sunray Analytics Ltd. All rights reserved
+#
+
+#cloud-config
+# See documentation for more configuration examples
+# https://cloudinit.readthedocs.io/en/latest/reference/examples.html
+
+# Install arbitrary packages
+# https://cloudinit.readthedocs.io/en/latest/reference/examples.html#install-arbitrary-packages
+package_update: true
+packages:
+  - docker
+  - postgresql15.x86_64
+  - jq
+  - dos2unix
+# Run commands on first boot
+# https://cloudinit.readthedocs.io/en/latest/reference/examples.html#run-commands-on-first-boot
+
+users:
+  - name: ec2-user
+    groups: [docker, adm, wheel, systemd-journal]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+runcmd:
+  - systemctl start docker
+  - systemctl enable docker
+  - mkdir -p /usr/local/lib/docker/cli-plugins/
+  - curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+  - chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+  - dos2unix /home/ec2-user/* /home/ec2-user/.*
+  - chown ec2-user:ec2-user -R /home/ec2-user
+  - sudo su - ec2-user bash -c "./setup.sh"
+#datasource:
+#  Ec2:
+#    metadata_urls: ["http://169.254.169.254:80", "http://instance-data:8773"]
+#    max_wait: 120
+#    timeout: 50
+#    apply_full_imds_network_config: true
