@@ -7,5 +7,9 @@ output "db_security_group_id" {
 }
 
 output "db_instance_id" {
-  value = aws_db_instance.default.id
+  value = var.create_database ? aws_db_instance.default[0].id : null
+}
+
+output "assets_bucket" {
+  value = aws_s3_bucket.assets_bucket.id
 }

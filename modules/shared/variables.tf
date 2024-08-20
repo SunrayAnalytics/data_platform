@@ -25,3 +25,9 @@ variable "db_instance_class" {
   description = "Determines the size of the database"
   default     = "db.t3.micro"
 }
+
+variable "create_database" {
+  type        = bool
+  description = "Whether to create a database or not"
+  default     = false
+}

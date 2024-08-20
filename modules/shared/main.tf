@@ -6,6 +6,16 @@ data "aws_vpc" "dwh" {
   id = var.vpc.vpc_id
 }
 
+
+resource "aws_s3_bucket" "assets_bucket" {
+  bucket = "${var.environment_name}-code-assets"
+
+  tags = {
+    Name        = "${var.environment_name} Assets"
+    Environment = "Prod"
+  }
+}
+
 resource "aws_db_subnet_group" "default" {
   name       = "main - ${var.environment_name}"
   subnet_ids = var.vpc.subnet_ids
@@ -16,6 +26,7 @@ resource "aws_db_subnet_group" "default" {
 }
 
 resource "aws_db_instance" "default" {
+  count                       = var.create_database ? 1 : 0
   allocated_storage           = 10
   db_name                     = var.environment_name
   engine                      = "postgres"
@@ -49,17 +60,16 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
-
-
 data "aws_route53_zone" "selected" {
   name         = "${var.domain_name}."
   private_zone = false
 }
 
 resource "aws_route53_record" "bastion" {
+  count                       = var.create_database ? 1 : 0
   zone_id = data.aws_route53_zone.selected.zone_id
   name    = "postgres.${data.aws_route53_zone.selected.name}"
   type    = "CNAME"
   ttl     = "300"
-  records = [aws_db_instance.default.address]
+  records = [aws_db_instance.default[0].address]
 }

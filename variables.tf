@@ -21,3 +21,8 @@ variable "my_ip" {
   type    = string
   default = "185.206.192.12/32"
 }
+
+variable "airbyte_enabled" {
+  type    = bool
+  default = false
+}
