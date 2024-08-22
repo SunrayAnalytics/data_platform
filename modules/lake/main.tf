@@ -23,11 +23,44 @@ resource "aws_lakeformation_resource" "resource" {
   for_each = aws_s3_bucket.data_lake_bucket
 
   arn = each.value.arn
-#  hybrid_access_enabled = true
+  hybrid_access_enabled = true
 }
 
 resource "aws_lakeformation_data_lake_settings" "data_lake_settings" {
-  admins = ["arn:aws:iam::184065244952:user/sunray_deploy"] # TODO, parameterize this
+  admins = var.lake_administrators
+
+#  create_database_default_permissions {
+##    permissions = ["SELECT", "ALTER", "DROP"]
+#    permissions = ["ALL"]
+#    principal   = "IAMAllowedPrincipals"
+#  }
+#
+#  create_table_default_permissions {
+#    permissions = ["ALL"]
+#    principal   = "IAMAllowedPrincipals"
+#  }
+}
+
+resource "aws_lakeformation_permissions" "data_location_access" {
+  for_each = aws_s3_bucket.data_lake_bucket
+  principal   = var.lake_administrators[0]
+  permissions = ["DATA_LOCATION_ACCESS"]
+
+  data_location {
+    arn = each.value.arn
+  }
+  permissions_with_grant_option = ["DATA_LOCATION_ACCESS"]
+}
+// TODO Should do a set product of this
+resource "aws_lakeformation_permissions" "data_location_access2" {
+  for_each = aws_s3_bucket.data_lake_bucket
+  principal   = var.lake_administrators[1]
+  permissions = ["DATA_LOCATION_ACCESS"]
+
+  data_location {
+    arn = each.value.arn
+  }
+  permissions_with_grant_option = ["DATA_LOCATION_ACCESS"]
 }
 
 resource "aws_s3_bucket_acl" "data_lake_bucket_acl" {

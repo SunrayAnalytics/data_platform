@@ -9,7 +9,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.66.1"
+      version = "~> 5.63"
     }
     template = {
       source  = "hashicorp/template"
@@ -41,10 +41,19 @@ module "shared" {
   }
 }
 
+data "aws_iam_session_context" "current" {
+  arn = data.aws_caller_identity.current.arn
+}
+
 module "lake" {
   source           = "./modules/lake"
   environment_name = var.environment_name
   bucket_name_prefix = "sunray"
+  lake_administrators = [
+    "arn:aws:iam::184065244952:user/sunray_deploy",
+    data.aws_iam_session_context.current.issuer_arn,
+    aws_iam_role.github_oidc_role.arn,
+  ] # TODO, parameterize this]
 }
 
 module "glue" {

@@ -5,3 +5,7 @@ variable "environment_name" {
 variable "bucket_name_prefix" {
   type = string
 }
+
+variable "lake_administrators" {
+  type = list(string)
+}

@@ -1,12 +1,12 @@
 resource "aws_iam_role" "GlueServiceRole" {
-  name = "GlueServiceRole"
+  name = "GdpGlueSvcRole"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
         Effect = "Allow",
         Principal = {
-          Service = "glue.amazonaws.com"
+          Service = ["glue.amazonaws.com", "events.amazonaws.com"]
         },
         Action = "sts:AssumeRole"
       }
