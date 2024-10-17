@@ -1,5 +1,5 @@
 output "raw_bucket_id" {
-    value = aws_s3_bucket.data_lake_bucket["${var.bucket_name_prefix}-raw"].id
+  value = aws_s3_bucket.data_lake_bucket["${var.bucket_name_prefix}-raw"].id
 }
 
 output "processed_bucket_id" {

@@ -32,7 +32,7 @@ module "shared" {
   source           = "./modules/shared"
   environment_name = var.environment_name
   domain_name      = var.domain_name
-  create_database =  var.airbyte_enabled
+  create_database  = var.airbyte_enabled
 
   vpc = {
     availability_zone_names = module.vpc.availability_zone_names
@@ -46,8 +46,8 @@ data "aws_iam_session_context" "current" {
 }
 
 module "lake" {
-  source           = "./modules/lake"
-  environment_name = var.environment_name
+  source             = "./modules/lake"
+  environment_name   = var.environment_name
   bucket_name_prefix = "sunray"
   lake_administrators = [
     "arn:aws:iam::184065244952:user/sunray_deploy",
@@ -57,13 +57,13 @@ module "lake" {
 }
 
 module "glue" {
-  source           = "./modules/glue"
+  source                    = "./modules/glue"
   data_lake_consumer_policy = module.lake.data_lake_consumer_policy
   data_lake_producer_policy = module.lake.data_lake_producer_policy
 }
 
 module "airbyte" {
-  count = var.airbyte_enabled ? 1 : 0
+  count            = var.airbyte_enabled ? 1 : 0
   source           = "./modules/extraction/airbyte"
   environment_name = var.environment_name
 
@@ -77,7 +77,7 @@ module "airbyte" {
 }
 
 resource "aws_security_group_rule" "allow_bastion_db" {
-  count = var.airbyte_enabled ? 1 : 0
+  count                    = var.airbyte_enabled ? 1 : 0
   security_group_id        = module.shared.db_security_group_id
   from_port                = 5432
   to_port                  = 5432
