@@ -21,3 +21,7 @@ variable "my_ip" {
   type    = string
   default = "185.206.192.12/32"
 }
+
+variable "snowflake_account_id" {
+  type = string
+}

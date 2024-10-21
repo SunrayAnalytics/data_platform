@@ -1,0 +1,13 @@
+load_from:
+#  - grpc_server:
+#      host: main_pipeline_test.data.sunray.local
+#      port: 4000
+#      location_name: "main_pipeline_test"
+  - grpc_server:
+      host: main_pipeline_production.data.sunray.local
+      port: 4000
+      location_name: "main_pipeline_production"
+#  - grpc_server:
+#      host: extraction_pipeline_production.data.sunray.local
+#      port: 4000
+#      location_name: "extraction_pipeline_production"

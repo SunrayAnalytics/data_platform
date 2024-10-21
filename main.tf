@@ -49,13 +49,29 @@ module "airbyte" {
     vpc_id                  = module.vpc.vpc_id
     subnet_ids              = module.vpc.private_subnet_ids
   }
-  db_instance_id       = module.shared.db_instance_id
-  db_security_group_id = module.shared.db_security_group_id
+  db_instance_id        = module.shared.db_instance_id
+  db_security_group_id  = module.shared.db_security_group_id
   airbyte_instance_type = "t3.medium"
 }
 
 module "orchestration" {
   source = "./modules/orchestration"
+
+  vpc = {
+    availability_zone_names = module.vpc.availability_zone_names
+    vpc_id                  = module.vpc.vpc_id
+    subnet_ids              = module.vpc.private_subnet_ids
+  }
+
+  db_instance_id            = module.shared.db_instance_id
+  db_security_group_id      = module.shared.db_security_group_id
+  airbyte_security_group_id = module.airbyte.airbyte_security_group_id
+  snowflake_account_id      = var.snowflake_account_id
+
+  load_balancer_arn            = aws_lb.default.id
+  load_balancer_listener_arn   = aws_lb_listener.secure_listener.id
+  load_balancer_security_group = aws_security_group.lb.id
+  domain_name                  = var.domain_name
 }
 
 resource "aws_security_group_rule" "allow_bastion_db" {
