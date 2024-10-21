@@ -17,7 +17,7 @@ variable "environment_name" {
 
 variable "airbyte_instance_type" {
   type        = string
-  default     = "t3.small"
+  default     = "t3.medium"
   description = "The ec2 size of the airbyte instance"
 }
 

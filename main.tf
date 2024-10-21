@@ -9,7 +9,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.66.1"
+      version = "~> 5.63"
     }
     template = {
       source  = "hashicorp/template"
@@ -51,6 +51,11 @@ module "airbyte" {
   }
   db_instance_id       = module.shared.db_instance_id
   db_security_group_id = module.shared.db_security_group_id
+  airbyte_instance_type = "t3.medium"
+}
+
+module "orchestration" {
+  source = "./modules/orchestration"
 }
 
 resource "aws_security_group_rule" "allow_bastion_db" {

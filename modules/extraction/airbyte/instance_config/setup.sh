@@ -25,8 +25,14 @@ CREATE DATABASE temporal_visibility;
 GRANT ALL PRIVILEGES ON DATABASE airbyte TO airbyte;
 GRANT ALL PRIVILEGES ON DATABASE temporal TO airbyte;
 GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO airbyte;
+
+ALTER DATABASE airbyte OWNER TO airbyte;
+ALTER DATABASE temporal OWNER TO airbyte;
+ALTER DATABASE temporal_visibility OWNER TO airbyte;
 EOF
 
+mkdir -p temporal/dynamicconfig
+touch temporal/dynamicconfig/development.yaml
 # First of all initialize the database and create necessary databases and users
 psql --host=${database_host} --port=${database_port} --username=${master_username} --dbname=postgres < bootstrap_db.sql
 

@@ -66,7 +66,6 @@ resource "aws_nat_gateway" "example" {
 
 resource "aws_eip" "nat_eip" {
   for_each = aws_subnet.public
-  vpc      = true
 
   tags = {
     Name = "${var.environment_name} NAT EIP - ${each.key}"

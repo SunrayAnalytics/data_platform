@@ -19,7 +19,7 @@ resource "aws_db_instance" "default" {
   allocated_storage           = 10
   db_name                     = var.environment_name
   engine                      = "postgres"
-  engine_version              = "13.7"
+  engine_version              = "16.4"
   instance_class              = var.db_instance_class
   username                    = "root"
   manage_master_user_password = true
@@ -34,7 +34,15 @@ resource "aws_db_instance" "default" {
 
 resource "aws_db_parameter_group" "default" {
   name   = "rds-pg"
-  family = "postgres13"
+  family = "postgres16"
+
+  # Airbyte Temporal database has issues connecting over SSL (seems to be disabled)
+  # see https://github.com/airbytehq/airbyte/issues/39636
+  # also see https://github.com/airbytehq/airbyte/discussions/30482
+  parameter {
+    name  = "rds.force_ssl"
+    value = "0"
+  }
 }
 
 resource "aws_security_group" "rds_sg" {
