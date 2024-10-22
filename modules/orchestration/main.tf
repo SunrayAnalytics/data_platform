@@ -18,16 +18,6 @@ resource "aws_ecr_repository" "dagit" {
   }
 }
 
-resource "aws_ecr_repository" "transformation" {
-  name                 = "transformation"
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
-
-  image_scanning_configuration {
-    scan_on_push = false
-  }
-}
-
 resource "aws_s3_bucket" "dagster_logs" {
   bucket        = "sunray-dagster-logs"
   force_destroy = true
@@ -148,11 +138,12 @@ data "aws_secretsmanager_random_password" "snowflake_password" {
 resource "aws_secretsmanager_secret_version" "snowflake" {
   secret_id = aws_secretsmanager_secret.snowflake_db_credentials.id
   secret_string = jsonencode({
-    account  = "${var.snowflake_account_id}.eu-west-1"
-    user     = "SYS_DBT"
-    password = data.aws_secretsmanager_random_password.snowflake_password.random_password
-    database = "PRODUCTION"
-    role     = "ETL"
+    account   = "${var.snowflake_account_id}.eu-west-1"
+    user      = "SYS_DBT"
+    password  = data.aws_secretsmanager_random_password.snowflake_password.random_password
+    database  = "PRODUCTION"
+    role      = "ETL"
+    warehouse = "PROD_ETL"
   })
 
   lifecycle {

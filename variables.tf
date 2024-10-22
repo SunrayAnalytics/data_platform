@@ -25,3 +25,9 @@ variable "my_ip" {
 variable "snowflake_account_id" {
   type = string
 }
+
+
+
+variable "implementation_image_repository" {
+  type = string
+}

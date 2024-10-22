@@ -1,0 +1,43 @@
+<html>
+Dear Data Engineer,
+
+<p>
+I regret to inform you that some sort of problem has occurred in a dagster job,
+if you would be so kind as to give this some attention it would be greatly
+appreciated!
+</p>
+<p>
+<b>Job Failure Message:</b>
+</p>
+<p>
+    <code>
+    {{ context.failure_event.message }}
+    </code>
+</p>
+{% for step_failure_event in context.step_failure_events %}
+    <p>
+    {% if step_failure_event.event_specific_data.error is defined and step_failure_event.event_specific_data.error | length %}
+        {% set specific_error = step_failure_event.event_specific_data.error %}
+        <b>Error Message:</b> {{ specific_error.message }}<br />
+        <b>Stack:</b><br />
+        <code>
+        {% for stack_element in specific_error.stack %}
+            <p>
+            {{ stack_element }}
+            </p>
+        {%- endfor %}
+        </code>
+        <b>Error Source:</b> {{  step_failure_event.event_specific_data.error_source }}
+    {% else %}
+        <b>Error Message:</b> {{ step_failure_event.message }}
+    {% endif %}
+    </p>
+{% endfor %}
+<p>
+For details please see <a href="{{ dagit_base_url }}/runs/{{ context.dagster_run.run_id }}">Daster UI</a>
+</p>
+<p>
+Sincerely,<br/>
+    Your friendly Dagster Bot
+</p>
+</html>

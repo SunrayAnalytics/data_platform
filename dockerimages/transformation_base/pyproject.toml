@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.dagster]
+module_name = "dagster_deployment"
+
+[project]
+name = "dagster_deployment"
+version = "0.0.0"
+requires-python = ">=3.10"
+
+dependencies = [
+    "dagster",
+    # "dagster-airbyte",
+    "dagster-aws",
+    "dagster-postgres",
+    "dagster-docker",
+    "dagster-dbt",
+    "dagster-duckdb",
+    "dagster-duckdb-pandas",
+    "dagster-snowflake",
+    "dbt-snowflake",
+    "boto3",
+    "Jinja2",
+]
+[project.optional-dependencies]
+dev = [
+    "dagit",
+    "pytest",
+    "snowflake-connector-python[secure-local-storage]",
+    "black",
+    "python-dotenv",
+]
+
+[tool.setuptool]
+packages = ["dagster_deployment", "dagster_deployment.*"]
+
+[tool.setuptools.packages.find]
+where = [""]
+include = ["dagster_deployment", "dagster_deployment.**"]  # alternatively: `exclude = ["additional*"]`
+exclude = ["dbt", "bin"]

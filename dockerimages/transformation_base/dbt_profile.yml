@@ -1,0 +1,18 @@
+config:
+  partial_parse: true
+  use_colors: False
+
+production:
+  target: prod
+  outputs:
+    prod:
+      #client_session_keep_alive: false
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      database: "{{ env_var('DBT_SNOWFLAKE_DATABASE') }}"
+      schema: "{{ env_var('DBT_SNOWFLAKE_SCHEMA', 'test') }}"
+      role: "{{ env_var('DBT_SNOWFLAKE_ROLE', 'FR_PRODUCTION_BUILD') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      threads: 4
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH') }}"

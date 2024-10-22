@@ -1,0 +1,17 @@
+-c modules/orchestration/pip_constraints.txt
+
+snowflake-connector-python
+dbt-snowflake
+
+boto3
+
+# Development
+pre-commit
+black
+pytest
+pyaml
+
+# For documentation
+sphinx
+sphinxcontrib-plantuml
+python-dotenv

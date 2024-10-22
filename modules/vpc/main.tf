@@ -5,8 +5,9 @@
 # One can use IPAM to automatically asisgn CIDR Blocks thoughout the organization
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc#ipv4_ipam_pool_id
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-  #  enable_dns_support = true
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 
   tags = {
     Name = var.environment_name
