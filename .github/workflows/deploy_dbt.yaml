@@ -31,13 +31,12 @@ jobs:
           role-session-name: oidc-role
           aws-region: ${{ vars.AWS_DEFAULT_REGION }}
 
-      - name: Build Image # TODO Get the repo, and the snowflake secret
+      - name: List Files
         run: |
-          echo $GITHUB_SHA
           ls -R
         env:
           GITHUB_HASH: ${{ github.sha }}
-      - name: Build Image # TODO Get the repo, and the snowflake secret
+      - name: Build Image
         run: |
           set -e -x
 
@@ -110,3 +109,10 @@ jobs:
 
           docker tag ${DockerRepository}:${CurrentRevision} ${DockerRepository}:latest
           docker push ${DockerRepository}:latest
+      - name: Update Service
+        run: |
+          aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --desired-count 2
+          aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --desired-count 1
+        env: # All these must come from configuration
+          CLUSTER: sunray-data
+          SERVICE: transformation-service
