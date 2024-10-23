@@ -40,18 +40,35 @@ jobs:
       - name: Build Image # TODO Get the repo, and the snowflake secret
         run: |
           set -e -x
-          SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-          pushd $SCRIPT_DIR/..
+          cat << EOF > Dockerfile
+          FROM ${BASE_IMAGE}
 
-          #if [[ $( git status --porcelain . | wc -l) != "0" ]]; then
-          #    echo "This checkout is dirty refusing to build"
-          #    exit 1
-          #fi
+          # These build arguments are needed for dbt compile
+          ARG SNOWFLAKE_ACCOUNT
+          ARG DBT_SNOWFLAKE_DATABASE
+          ARG DBT_SNOWFLAKE_SCHEMA
+          ARG DBT_SNOWFLAKE_ROLE
+          ARG SNOWFLAKE_WAREHOUSE
+          ARG SNOWFLAKE_USER
+          ARG SNOWFLAKE_PASSWORD
 
+          RUN pip install --upgrade snowflake-connector-python # Hack to upgrade to a later version 3.12.2
 
-          DockerRepository="${ECR_REPOSITORY_URL:-184065244952.dkr.ecr.eu-west-1.amazonaws.com/sunrayanalytics-data_platform_reference_implementation}"
-          SecretKey="${SNOWFLAKE_SECRET:-snowflake-db20241021074242203800000001}"
+          # Copy in dbt-project
+          RUN mkdir -p /opt/dagster/app/dbt
+          COPY models /opt/dagster/app/dbt/models
+          COPY tests /opt/dagster/app/dbt/tests
+          COPY macros /opt/dagster/app/dbt/macros
+          COPY seeds /opt/dagster/app/dbt/seeds
+          COPY snapshots /opt/dagster/app/dbt/snapshots
+          COPY dbt_project.yml /opt/dagster/app/dbt/
+
+          WORKDIR /opt/dagster/app/dbt
+          #RUN dbt clean && dbt deps && dbt compile
+          WORKDIR /opt/dagster/app
+          EOF
+
 
           aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ${DockerRepository}:${CurrentRevision}
 
@@ -63,36 +80,28 @@ jobs:
           SnowflakePassword=$(echo $SecretValue | jq -r .password)
           SnowflakeWarehouse=$(echo $SecretValue | jq -r .warehouse)
 
-          pwd
           echo "Building ${DockerRepository}:${CurrentRevision}"
           docker build \
-          -t ${DockerRepository}:${CurrentRevision} \
-          --build-arg SNOWFLAKE_ACCOUNT=$SnowflakeAccount \
-          --build-arg DBT_SNOWFLAKE_DATABASE=$SnowflakeDatabase \
-          --build-arg DBT_SNOWFLAKE_SCHEMA=test \
-          --build-arg SNOWFLAKE_USER=$SnowflakeUser \
-          --build-arg SNOWFLAKE_PASSWORD=$SnowflakePassword \
-          --build-arg SNOWFLAKE_WAREHOUSE=$SnowflakeWarehouse \
-          .
-          popd
+            -t ${DockerRepository}:${CurrentRevision} \
+            --build-arg SNOWFLAKE_ACCOUNT=$SnowflakeAccount \
+            --build-arg DBT_SNOWFLAKE_DATABASE=$SnowflakeDatabase \
+            --build-arg DBT_SNOWFLAKE_SCHEMA=test \
+            --build-arg SNOWFLAKE_USER=$SnowflakeUser \
+            --build-arg SNOWFLAKE_PASSWORD=$SnowflakePassword \
+            --build-arg SNOWFLAKE_WAREHOUSE=$SnowflakeWarehouse \
+            .
         env:
-          ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
-          SNOWFLAKE_SECRET: ${{ vars.SNOWFLAKE_SECRET }}
+          DockerRepository: ${{ vars.ECR_REPOSITORY_URL }}
+          SecretKey: ${{ vars.SNOWFLAKE_SECRET }}
           CurrentRevision: ${{ github.sha }}
+          BASE_IMAGE: 184065244952.dkr.ecr.eu-west-1.amazonaws.com/transformation-base:latest # TODO Set the current version of this repository here
       - name: Push Image # TODO Get the repo, and the snowflake secret
         env:
-          ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
+          DockerRepository: ${{ vars.ECR_REPOSITORY_URL }}
           SNOWFLAKE_SECRET: ${{ vars.SNOWFLAKE_SECRET }}
           CurrentRevision: ${{ github.sha }}
         run: |
           set -e
-
-          #if [[ $( git status --porcelain | wc -l) != "0" ]]; then
-          #    echo "This checkout is dirty refusing to build"
-          #    exit 1
-          #fi
-
-          DockerRepository="${ECR_REPOSITORY_URL:-184065244952.dkr.ecr.eu-west-1.amazonaws.com/sunrayanalytics-data_platform_reference_implementation}"
 
           aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ${DockerRepository}:${CurrentRevision}
 
