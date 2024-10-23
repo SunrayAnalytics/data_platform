@@ -30,6 +30,15 @@ resource "aws_s3_bucket" "dagster_logs" {
 #   acl = "private"
 # }
 
+resource "aws_ecr_repository" "transformation" {
+  name                 = "transformation-base"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+}
 resource "aws_s3_bucket_ownership_controls" "dagster_logs" {
   bucket = aws_s3_bucket.dagster_logs.id
   rule {
@@ -124,29 +133,28 @@ resource "aws_secretsmanager_secret_version" "dagster" {
 #
 # GRANT ROLE ETL TO USER SYS_DBT;
 
-resource "aws_secretsmanager_secret" "snowflake_db_credentials" {
-  name_prefix = "snowflake-db"
-}
+module "dbt_project" {
+  for_each = { for index, val in toset(var.dbt_projects) : "${val.github.org}-${val.github.repo}" => val }
+  source   = "../dbt_project"
+  vpc      = var.vpc
 
-data "aws_secretsmanager_random_password" "snowflake_password" {
-  password_length     = 30
-  exclude_numbers     = false
-  exclude_punctuation = true
-  include_space       = false
-}
+  # Shared resources variables
+  db_instance_id               = var.db_instance_id
+  db_security_group_id         = var.db_security_group_id
+  airbyte_security_group_id    = var.airbyte_security_group_id
+  load_balancer_arn            = var.load_balancer_arn
+  load_balancer_listener_arn   = var.load_balancer_listener_arn
+  load_balancer_security_group = var.load_balancer_security_group
 
-resource "aws_secretsmanager_secret_version" "snowflake" {
-  secret_id = aws_secretsmanager_secret.snowflake_db_credentials.id
-  secret_string = jsonencode({
-    account   = "${var.snowflake_account_id}.eu-west-1"
-    user      = "SYS_DBT"
-    password  = data.aws_secretsmanager_random_password.snowflake_password.random_password
-    database  = "PRODUCTION"
-    role      = "ETL"
-    warehouse = "PROD_ETL"
-  })
+  # Coming from this stack
+  private_dns_namespace  = aws_service_discovery_private_dns_namespace.dns_namespace.id
+  cluster_id             = aws_ecs_cluster.sunray_data.id
+  service_security_group = aws_security_group.ecs_service.id
 
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
+  # Input Variables
+  domain_name = var.domain_name
+  dbt_project = each.value
+
+  dagster_db_secret   = aws_secretsmanager_secret.dagster_db_credentials.id
+  dagster_logs_bucket = aws_s3_bucket.dagster_logs.id
 }

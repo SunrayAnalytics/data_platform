@@ -9,3 +9,7 @@ output "bastion_instance_id" {
 output "domain_name" {
   value = var.domain_name
 }
+
+output "dbt_ecr_repos" {
+  value = module.orchestration.dbt_repositories
+}

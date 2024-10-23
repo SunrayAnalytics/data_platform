@@ -1,8 +1,35 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-resource "aws_ecr_repository" "transformation" {
-  name                 = "transformation-base"
+resource "aws_secretsmanager_secret" "snowflake_db_credentials" {
+  name_prefix = "snowflake-db"
+}
+
+data "aws_secretsmanager_random_password" "snowflake_password" {
+  password_length     = 30
+  exclude_numbers     = false
+  exclude_punctuation = true
+  include_space       = false
+}
+
+resource "aws_secretsmanager_secret_version" "snowflake" {
+  secret_id = aws_secretsmanager_secret.snowflake_db_credentials.id
+  secret_string = jsonencode({
+    account   = "${var.dbt_project.snowflake_account_id}.eu-west-1" # TODO Don't hardcode region
+    user      = "SYS_DBT"
+    password  = data.aws_secretsmanager_random_password.snowflake_password.random_password
+    database  = "PRODUCTION"
+    role      = "ETL"
+    warehouse = "PROD_ETL"
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_ecr_repository" "dbt_project_repository" {
+  name                 = "${lower(var.dbt_project.github.org)}-${var.dbt_project.github.repo}"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
@@ -66,7 +93,7 @@ resource "aws_ecs_task_definition" "transformation" {
   container_definitions = jsonencode([
     {
       name      = "main-pipeline"
-      image     = "${var.implementation_image_repository}:latest"
+      image     = "${aws_ecr_repository.dbt_project_repository.repository_url}:latest"
       cpu       = 256
       memory    = 1024
       essential = true
@@ -105,27 +132,27 @@ resource "aws_ecs_task_definition" "transformation" {
         },
         {
           name      = "SNOWFLAKE_USER"
-          valueFrom = "${var.snowflake_db_secret}:user::"
+          valueFrom = "${aws_secretsmanager_secret.snowflake_db_credentials.id}:user::"
         },
         {
           name      = "SNOWFLAKE_PASSWORD"
-          valueFrom = "${var.snowflake_db_secret}:password::"
+          valueFrom = "${aws_secretsmanager_secret.snowflake_db_credentials.id}:password::"
         },
         {
           name      = "SNOWFLAKE_ACCOUNT"
-          valueFrom = "${var.snowflake_db_secret}:account::"
+          valueFrom = "${aws_secretsmanager_secret.snowflake_db_credentials.id}:account::"
         },
         {
           name      = "DBT_SNOWFLAKE_ROLE"
-          valueFrom = "${var.snowflake_db_secret}:role::"
+          valueFrom = "${aws_secretsmanager_secret.snowflake_db_credentials.id}:role::"
         },
         {
           name      = "DBT_SNOWFLAKE_DATABASE"
-          valueFrom = "${var.snowflake_db_secret}:database::"
+          valueFrom = "${aws_secretsmanager_secret.snowflake_db_credentials.id}:database::"
         },
         {
           name      = "SNOWFLAKE_WAREHOUSE"
-          valueFrom = "${var.snowflake_db_secret}:warehouse::"
+          valueFrom = "${aws_secretsmanager_secret.snowflake_db_credentials.id}:warehouse::"
         }
       ],
       environment = [
@@ -170,30 +197,16 @@ resource "aws_ecs_task_definition" "transformation" {
     }
   ])
 
-  #   volume {
-  #     name      = "service-storage"
-  #     host_path = "/ecs/service-storage"
-  #   }
-  #
-  #   placement_constraints {
-  #     type       = "memberOf"
-  #     expression = "attribute:ecs.availability-zone in [us-west-2a, us-west-2b]"
-  #   }
 }
 
 
 data "aws_secretsmanager_secret" "dagster_db_secret" {
   name = var.dagster_db_secret
 }
-data "aws_secretsmanager_secret" "snowflake_db_secret" {
-  name = var.snowflake_db_secret
-}
 
 resource "aws_iam_role" "dagit_execution_role" {
   name = "transformation-execution-role"
 
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -220,7 +233,7 @@ resource "aws_iam_role" "dagit_execution_role" {
             "kms:Decrypt"
           ]
           Resource = [
-            data.aws_secretsmanager_secret.snowflake_db_secret.arn,
+            aws_secretsmanager_secret.snowflake_db_credentials.arn,
             data.aws_secretsmanager_secret.dagster_db_secret.arn,
             "arn:aws:kms:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:alias/aws/secretsmanager"
           ]

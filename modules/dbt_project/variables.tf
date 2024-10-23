@@ -6,6 +6,16 @@ variable "vpc" {
   })
 }
 
+variable "dbt_project" {
+  type = object({
+    github = object({
+      org  = string
+      repo = string
+    })
+    snowflake_account_id = string
+  })
+}
+
 variable "db_instance_id" {
   type = string
 }
@@ -15,10 +25,6 @@ variable "db_security_group_id" {
 }
 
 variable "airbyte_security_group_id" {
-  type = string
-}
-
-variable "snowflake_account_id" {
   type = string
 }
 
@@ -55,13 +61,5 @@ variable "dagster_logs_bucket" {
 }
 
 variable "dagster_db_secret" {
-  type = string
-}
-
-variable "snowflake_db_secret" {
-  type = string
-}
-
-variable "implementation_image_repository" {
   type = string
 }

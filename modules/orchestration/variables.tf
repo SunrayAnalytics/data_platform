@@ -18,10 +18,6 @@ variable "airbyte_security_group_id" {
   type = string
 }
 
-variable "snowflake_account_id" {
-  type = string
-}
-
 variable "load_balancer_arn" {
   type = string
 }
@@ -36,4 +32,14 @@ variable "load_balancer_security_group" {
 
 variable "domain_name" {
   type = string
+}
+
+variable "dbt_projects" {
+  type = list(object({
+    github = object({
+      org  = string
+      repo = string
+    })
+    snowflake_account_id = string
+  }))
 }

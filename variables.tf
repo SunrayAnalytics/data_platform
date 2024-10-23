@@ -22,12 +22,13 @@ variable "my_ip" {
   default = "185.206.192.12/32"
 }
 
-variable "snowflake_account_id" {
-  type = string
-}
 
-
-
-variable "implementation_image_repository" {
-  type = string
+variable "dbt_projects" {
+  type = list(object({
+    github = object({
+      org  = string
+      repo = string
+    })
+    snowflake_account_id = string
+  }))
 }

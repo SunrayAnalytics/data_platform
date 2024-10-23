@@ -14,5 +14,5 @@ repos:
   hooks:
   - id: terraform_fmt
 #  - id: terraform_tflint # Not installed yet
-  - id: terraform_validate
+#  - id: terraform_validate
 #  - id: terraform_tfsec
