@@ -1,5 +1,7 @@
 name: Deploy DBT-project
 
+# NOTE: In the github settings we need to allow other workflows in the org to call this one
+
 on:
   workflow_call:
     inputs:
@@ -26,9 +28,15 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE }}
-          role-session-name: GdpGithubOidcRole-CiCd
+          role-session-name: oidc-role
           aws-region: ${{ vars.AWS_DEFAULT_REGION }}
 
+      - name: Build Image # TODO Get the repo, and the snowflake secret
+        run: |
+          echo $GITHUB_SHA
+          ls -R
+        env:
+          GITHUB_HASH: ${{ github.sha }}
       - name: Build Image # TODO Get the repo, and the snowflake secret
         run: |
           set -e -x
