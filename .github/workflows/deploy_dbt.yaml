@@ -49,7 +49,6 @@ jobs:
           #    exit 1
           #fi
 
-          CurrentRevision=$(git rev-parse --short HEAD)
 
           DockerRepository="${ECR_REPOSITORY_URL:-184065244952.dkr.ecr.eu-west-1.amazonaws.com/sunrayanalytics-data_platform_reference_implementation}"
           SecretKey="${SNOWFLAKE_SECRET:-snowflake-db20241021074242203800000001}"
@@ -79,12 +78,12 @@ jobs:
         env:
           ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
           SNOWFLAKE_SECRET: ${{ vars.SNOWFLAKE_SECRET }}
-          GITHUB_HASH: ${{ github.sha }}
+          CurrentRevision: ${{ github.sha }}
       - name: Push Image # TODO Get the repo, and the snowflake secret
         env:
           ECR_REPOSITORY_URL: ${{ vars.ECR_REPOSITORY_URL }}
           SNOWFLAKE_SECRET: ${{ vars.SNOWFLAKE_SECRET }}
-          GITHUB_HASH: ${{ github.sha }}
+          CurrentRevision: ${{ github.sha }}
         run: |
           set -e
 
@@ -95,7 +94,6 @@ jobs:
 
           DockerRepository="${ECR_REPOSITORY_URL:-184065244952.dkr.ecr.eu-west-1.amazonaws.com/sunrayanalytics-data_platform_reference_implementation}"
 
-          CurrentRevision=$(git rev-parse --short HEAD)
           aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin ${DockerRepository}:${CurrentRevision}
 
           echo "Pushing image ${DockerRepository}:${CurrentRevision}"
