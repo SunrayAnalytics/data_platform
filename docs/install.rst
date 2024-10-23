@@ -8,6 +8,7 @@ Installing non-python dependencies
 * Install terraform
 * Install JQ
 * Install postgres client
+* Install docker
 
 
 -----

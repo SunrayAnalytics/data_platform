@@ -18,10 +18,9 @@ variable "domain_name" {
 }
 
 variable "my_ip" {
-  type    = string
-  default = "185.206.192.12/32"
+  type        = string
+  description = "For now just used to set up access"
 }
-
 
 variable "dbt_projects" {
   type = list(object({

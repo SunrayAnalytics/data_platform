@@ -1,3 +1,7 @@
+#
+# Copyright (c) 2023. Sunray Analytics Ltd. All rights reserved
+#
+
 -c modules/orchestration/pip_constraints.txt
 
 snowflake-connector-python

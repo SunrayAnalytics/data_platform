@@ -111,8 +111,7 @@ jobs:
           docker push ${DockerRepository}:latest
       - name: Update Service
         run: |
-          aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --desired-count 2
-          aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --desired-count 1
-        env: # All these must come from configuration
+          aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --force-new-deployment
+        env: # TODO: All these must come from configuration
           CLUSTER: sunray-data
           SERVICE: transformation-service

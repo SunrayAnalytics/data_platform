@@ -4,7 +4,7 @@ FROM python:3.10-slim
 WORKDIR /opt/dagster/app
 COPY pyproject.toml /opt/dagster/app
 COPY pip_constraints.txt /opt/dagster/app
-RUN pip install '.[dev]' -c pip_constraints.txt
+RUN pip install '.' -c pip_constraints.txt
 COPY dagster_deployment /opt/dagster/app/dagster_deployment
 
 # Prepare dbt profile settings
