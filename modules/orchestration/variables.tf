@@ -50,3 +50,8 @@ variable "dbt_projects" {
     snowflake_account_id = string
   }))
 }
+
+variable "bastion_instance_id" {
+  type        = string
+  description = "This is needed for the local provisioner to reach the database"
+}

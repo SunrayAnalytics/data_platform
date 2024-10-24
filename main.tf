@@ -19,7 +19,7 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  #   region = var.aws_region
 }
 
 module "vpc" {
@@ -48,9 +48,10 @@ module "orchestration" {
   load_balancer_security_group = aws_security_group.lb.id
 
   # Input arguments
-  domain_name       = var.domain_name
-  dbt_projects      = var.dbt_projects
-  airbyte_instances = var.airbyte_instances
+  domain_name         = var.domain_name
+  dbt_projects        = var.dbt_projects
+  airbyte_instances   = var.airbyte_instances
+  bastion_instance_id = module.vpc.bastion_instance_id
 }
 
 resource "aws_security_group_rule" "allow_bastion_db" {

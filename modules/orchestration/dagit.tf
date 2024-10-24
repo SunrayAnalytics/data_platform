@@ -65,7 +65,28 @@ resource "aws_cloudwatch_log_group" "dagster_deamon" {
   retention_in_days = 30
 }
 
+resource "terraform_data" "run_dagster_db_initialization" {
+  # When do we need to update this (is it when commit hash changes?)
+  triggers_replace = [
+  ]
+
+  provisioner "local-exec" {
+
+    command = "modules/orchestration/bin/initialize_db.sh"
+
+    environment = {
+      dagster_credentials       = aws_secretsmanager_secret.dagster_db_credentials.arn
+      db_master_credentials_arn = data.aws_db_instance.default.master_user_secret[0].secret_arn
+      tenant_id                 = var.tenant_id
+      BASTION_INSTANCE_ID       = var.bastion_instance_id
+      DOMAIN_NAME               = var.domain_name
+    }
+  }
+
+}
+
 resource "aws_ecs_task_definition" "service" {
+  depends_on               = [terraform_data.run_dagit_docker_build_push]
   family                   = "dagit-${var.tenant_id}"
   execution_role_arn       = aws_iam_role.dagit_execution_role.arn
   task_role_arn            = aws_iam_role.dagit_execution_role.arn
@@ -314,4 +335,6 @@ resource "aws_ecs_service" "dagit_service" {
     Application = "dagster"
     Tenant      = var.tenant_id
   }
+
+  depends_on = [terraform_data.run_dagster_db_initialization]
 }

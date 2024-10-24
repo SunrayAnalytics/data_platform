@@ -2,10 +2,10 @@
 # Copyright (c) 2023. Sunray Analytics Ltd. All rights reserved
 #
 
-variable "aws_region" { # TODO Figure out whether we actually need this
-  type        = string
-  description = "The region where resources should be provisioned"
-}
+# variable "aws_region" { # TODO Figure out whether we actually need this
+#   type        = string
+#   description = "The region where resources should be provisioned"
+# }
 
 variable "tenant_id" {
   type        = string

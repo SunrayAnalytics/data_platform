@@ -31,6 +31,20 @@ resource "aws_ecr_repository" "dagit" {
   }
 }
 
+resource "terraform_data" "run_dagit_docker_build_push" {
+  # When do we need to update this (is it when commit hash changes?)
+  triggers_replace = [
+  ]
+
+  provisioner "local-exec" {
+    command = "modules/orchestration/bin/build_docker.sh && modules/orchestration/bin/push_docker.sh"
+    environment = {
+      DockerRepository = aws_ecr_repository.dagit.repository_url
+    }
+  }
+  depends_on = [aws_ecr_repository.dagit]
+}
+
 resource "aws_s3_bucket" "dagster_logs" {
   bucket        = "sunray-dagster-logs-${var.tenant_id}"
   force_destroy = true
@@ -56,6 +70,20 @@ resource "aws_ecr_repository" "transformation" {
     Application = "dbt_project"
     Tenant      = var.tenant_id
   }
+}
+
+resource "terraform_data" "run_dbt_project_docker_build_push" {
+  # When do we need to update this (is it when commit hash changes?)
+  triggers_replace = [
+  ]
+
+  provisioner "local-exec" {
+    command = "dockerimages/transformation_base/bin/build_docker.sh && dockerimages/transformation_base/bin/push_docker.sh"
+    environment = {
+      DockerRepository = aws_ecr_repository.transformation.repository_url
+    }
+  }
+  depends_on = [aws_ecr_repository.transformation]
 }
 
 resource "aws_s3_bucket_ownership_controls" "dagster_logs" {
@@ -101,7 +129,7 @@ resource "aws_security_group_rule" "database_allow_ecs_service" {
 }
 
 resource "aws_secretsmanager_secret" "dagster_db_credentials" {
-  name = "dagster-db-${var.tenant_id}"
+  name_prefix = "dagster-db-${var.tenant_id}-"
 
   tags = {
     Application = "dagster"

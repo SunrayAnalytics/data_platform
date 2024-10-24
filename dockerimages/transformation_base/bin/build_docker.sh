@@ -9,11 +9,8 @@ pushd $SCRIPT_DIR/..
 #    exit 1
 #fi
 
-CFN_EXPORTS=$(aws cloudformation list-exports | jq '.Exports | map({"key": .Name, "value": .Value}) | from_entries')
-DockerRepository=$(echo "$CFN_EXPORTS" | jq -r '."TransformRepositoryUri-transform"')
+#DockerRepository=$(echo "$CFN_EXPORTS" | jq -r '."TransformRepositoryUri-transform"')
 CurrentRevision=$(git rev-parse --short HEAD)
-
-DockerRepository="184065244952.dkr.ecr.eu-west-1.amazonaws.com/transformation-base"
 
 pwd
 echo "Building ${DockerRepository}:${CurrentRevision}"

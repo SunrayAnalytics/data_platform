@@ -88,8 +88,10 @@ resource "aws_ecs_service" "transformation_service" {
   name            = "dagster-grpc-${local.project_id}" # TODO Make it so that multiple of these can co-exist
   cluster         = var.cluster_id
   task_definition = aws_ecs_task_definition.transformation.id
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  # We start of with a desired count of 0, the ci/cd pipeline should set this to 1 once the
+  # docker repository is populated
+  desired_count = 0
+  launch_type   = "FARGATE"
   network_configuration {
     subnets         = var.vpc.subnet_ids
     security_groups = [var.service_security_group]
@@ -102,6 +104,9 @@ resource "aws_ecs_service" "transformation_service" {
     Tenant     = var.tenant_id
     GithubOrg  = var.dbt_project.github.org
     GithubRepo = var.dbt_project.github.repo
+  }
+  lifecycle {
+    ignore_changes = [desired_count]
   }
 }
 
