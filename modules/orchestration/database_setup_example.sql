@@ -1,4 +1,4 @@
-CREATE DATABASE dagster;
-CREATE USER dagster PASSWORD 'xVACWdlWqwQrQAaVU60Z3SdDAouL1U';
-GRANT ALL PRIVILEGES ON DATABASE dagster to dagster;
-ALTER DATABASE dagster OWNER TO dagster;
+CREATE DATABASE dagster_${tenant_id};
+CREATE USER dagster_${tenant_id} PASSWORD '${password}';
+GRANT ALL PRIVILEGES ON DATABASE dagster_${tenant_id} to dagster_${tenant_id};
+ALTER DATABASE dagster${tenant_id} OWNER TO dagster_${tenant_id};

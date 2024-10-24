@@ -17,7 +17,7 @@ DockerRepository="184065244952.dkr.ecr.eu-west-1.amazonaws.com/transformation-ba
 
 pwd
 echo "Building ${DockerRepository}:${CurrentRevision}"
-cp ../../modules/orchestration/pip_constraints.txt ./
+cp ../../pip_constraints.txt ./
 docker build \
     -t ${DockerRepository}:${CurrentRevision} \
     .

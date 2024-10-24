@@ -17,9 +17,10 @@ echo "Reading the repository URL from the stack"
 CurrentRevision=$(git rev-parse --short HEAD)
 
 echo "Getting buildtime secrets"
-
+cp ../../../pip-constraints.txt .
 echo "Building ${DockerRepository}:${CurrentRevision}"
 docker build \
     -t ${DockerRepository}:${CurrentRevision} \
     .
+rm pip-constraints.txt
 popd

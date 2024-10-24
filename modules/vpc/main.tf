@@ -10,7 +10,8 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = var.environment_name
+    Name   = var.tenant_id
+    Tenant = var.tenant_id
   }
 }
 
@@ -18,8 +19,12 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+locals {
+  selected_azs = slice(data.aws_availability_zones.available.names, 0, var.number_of_azs)
+}
+
 resource "aws_subnet" "public" {
-  for_each   = { for idx, az in data.aws_availability_zones.available.names : az => idx }
+  for_each   = { for idx, az in local.selected_azs : az => idx }
   vpc_id     = aws_vpc.main.id
   cidr_block = "10.0.${(each.value + 1) * 2}.0/24"
 
@@ -27,18 +32,21 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.environment_name} - public ${each.key}"
+    Name   = "${var.tenant_id} - public ${each.key}"
+    Tenant = var.tenant_id
   }
 }
+
 resource "aws_subnet" "private" {
-  for_each   = { for idx, az in data.aws_availability_zones.available.names : az => idx }
+  for_each   = { for idx, az in local.selected_azs : az => idx }
   vpc_id     = aws_vpc.main.id
   cidr_block = "10.0.${(each.value + 1) * 2 - 1}.0/24"
 
   availability_zone = each.key
 
   tags = {
-    Name = "${var.environment_name} - private ${each.key}"
+    Name   = "${var.tenant_id} - private ${each.key}"
+    Tenant = var.tenant_id
   }
 }
 
@@ -46,7 +54,8 @@ resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "${var.environment_name} - GW"
+    Name   = "${var.tenant_id} - GW"
+    Tenant = var.tenant_id
   }
 }
 
@@ -57,7 +66,8 @@ resource "aws_nat_gateway" "example" {
   subnet_id     = each.value.id
 
   tags = {
-    Name = "${var.environment_name} gw NAT - ${each.key}"
+    Name   = "${var.tenant_id} gw NAT - ${each.key}"
+    Tenant = var.tenant_id
   }
 
   # To ensure proper ordering, it is recommended to add an explicit dependency
@@ -69,7 +79,8 @@ resource "aws_eip" "nat_eip" {
   for_each = aws_subnet.public
 
   tags = {
-    Name = "${var.environment_name} NAT EIP - ${each.key}"
+    Name   = "${var.tenant_id} NAT EIP - ${each.key}"
+    Tenant = var.tenant_id
   }
 }
 
@@ -82,7 +93,8 @@ resource "aws_route_table" "public_route_table" {
   }
 
   tags = {
-    Name = "${var.environment_name} - Public Routes"
+    Name   = "${var.tenant_id} - Public Routes"
+    Tenant = var.tenant_id
   }
 }
 
@@ -97,7 +109,8 @@ resource "aws_route_table" "private_route_table" {
   }
 
   tags = {
-    Name = "${var.environment_name} - Private Routes ${each.key}"
+    Name   = "${var.tenant_id} - Private Routes ${each.key}"
+    Tenant = var.tenant_id
   }
 
   lifecycle {

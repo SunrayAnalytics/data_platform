@@ -6,6 +6,10 @@ variable "vpc" {
   })
 }
 
+variable "tenant_id" {
+  type = string
+}
+
 variable "db_instance_id" {
   type = string
 }
@@ -14,8 +18,11 @@ variable "db_security_group_id" {
   type = string
 }
 
-variable "airbyte_security_group_id" {
-  type = string
+variable "airbyte_instances" {
+  type = list(object({
+    instance_type = string
+    classifier    = string
+  }))
 }
 
 variable "load_balancer_arn" {

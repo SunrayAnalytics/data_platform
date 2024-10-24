@@ -1,3 +1,4 @@
+# TODO: Maybe we can only have one openid connect provider per account?
 resource "aws_iam_openid_connect_provider" "default" {
   url = "https://token.actions.githubusercontent.com"
 
@@ -36,10 +37,16 @@ data "aws_iam_policy_document" "instance_assume_role_policy" {
   }
 }
 
+# TODO This needs shortening
 resource "aws_iam_role" "github_oidc_role" {
-  name               = "gb-${var.dbt_project.github.org}-${var.dbt_project.github.repo}-oidc"
+  name               = "gb-${var.tenant_id}-${var.dbt_project.github.org}-${var.dbt_project.github.repo}-oidc"
   path               = "/"
   assume_role_policy = data.aws_iam_policy_document.instance_assume_role_policy.json
+  tags = {
+    Tenant     = var.tenant_id
+    GithubOrg  = var.dbt_project.github.org
+    GithubRepo = var.dbt_project.github.repo
+  }
 }
 
 

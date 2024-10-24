@@ -3,7 +3,7 @@ FROM python:3.10-slim
 RUN mkdir -p /opt/dagster/dagster_home /opt/dagster/app
 WORKDIR /opt/dagster/app
 
-COPY pip_constraints.txt  /opt/dagster/app
+COPY ../../pip_constraints.txt  /opt/dagster/app
 RUN pip install dagit dagster-postgres dagster-aws -c /opt/dagster/app/pip_constraints.txt
 
 # Copy your code and workspace to /opt/dagster/app

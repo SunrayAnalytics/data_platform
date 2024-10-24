@@ -1,8 +1,19 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+locals {
+  # Generate a fixed length project-id
+  project_id = base64sha256("${var.tenant_id}/${var.dbt_project.github.org}/${var.dbt_project.github.repo}")
+}
+
 resource "aws_secretsmanager_secret" "snowflake_db_credentials" {
-  name_prefix = "snowflake-db"
+  name = "snowflake-db-${local.project_id}"
+
+  tags = {
+    Tenant     = var.tenant_id
+    GithubOrg  = var.dbt_project.github.org
+    GithubRepo = var.dbt_project.github.repo
+  }
 }
 
 data "aws_secretsmanager_random_password" "snowflake_password" {
@@ -12,6 +23,7 @@ data "aws_secretsmanager_random_password" "snowflake_password" {
   include_space       = false
 }
 
+# Send in all these details, or create the user in snowflake
 resource "aws_secretsmanager_secret_version" "snowflake" {
   secret_id = aws_secretsmanager_secret.snowflake_db_credentials.id
   secret_string = jsonencode({
@@ -26,20 +38,26 @@ resource "aws_secretsmanager_secret_version" "snowflake" {
   lifecycle {
     ignore_changes = [secret_string]
   }
+
 }
 
 resource "aws_ecr_repository" "dbt_project_repository" {
-  name                 = "${lower(var.dbt_project.github.org)}-${var.dbt_project.github.repo}"
+  name                 = "dbt_project_${local.project_id}"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = false
   }
+  tags = {
+    Tenant     = var.tenant_id
+    GithubOrg  = var.dbt_project.github.org
+    GithubRepo = var.dbt_project.github.repo
+  }
 }
 
 resource "aws_service_discovery_service" "example" {
-  name = "main_pipeline_production" # TODO This has to be amended if we're going multitenant
+  name = "dbt_proj-${local.project_id}" # TODO This has to be amended if we're going multitenant
 
   dns_config {
     namespace_id = var.private_dns_namespace
@@ -59,10 +77,15 @@ resource "aws_service_discovery_service" "example" {
   health_check_custom_config {
     failure_threshold = 1
   }
+  tags = {
+    Tenant     = var.tenant_id
+    GithubOrg  = var.dbt_project.github.org
+    GithubRepo = var.dbt_project.github.repo
+  }
 }
 
 resource "aws_ecs_service" "transformation_service" {
-  name            = "transformation-service" # TODO Make it so that multiple of these can co-exist
+  name            = "dagster-grpc-${local.project_id}" # TODO Make it so that multiple of these can co-exist
   cluster         = var.cluster_id
   task_definition = aws_ecs_task_definition.transformation.id
   desired_count   = 1
@@ -75,15 +98,25 @@ resource "aws_ecs_service" "transformation_service" {
     registry_arn = aws_service_discovery_service.example.arn
     port         = 4000
   }
+  tags = {
+    Tenant     = var.tenant_id
+    GithubOrg  = var.dbt_project.github.org
+    GithubRepo = var.dbt_project.github.repo
+  }
 }
 
 resource "aws_cloudwatch_log_group" "dagit" {
-  name              = "/ecs/task/transformation" # TODO make each deployment unique
+  name              = "/ecs/task/${var.tenant_id}/${var.dbt_project.github.org}/${var.dbt_project.github.repo}"
   retention_in_days = 30
+  tags = {
+    Tenant     = var.tenant_id
+    GithubOrg  = var.dbt_project.github.org
+    GithubRepo = var.dbt_project.github.repo
+  }
 }
 
 resource "aws_ecs_task_definition" "transformation" {
-  family                   = "transformation" # TODO Make each deployment unique
+  family                   = "dagster-grpc-${local.project_id}"
   execution_role_arn       = aws_iam_role.dagit_execution_role.arn
   task_role_arn            = aws_iam_role.dagit_execution_role.arn
   requires_compatibilities = ["FARGATE"]
@@ -166,17 +199,17 @@ resource "aws_ecs_task_definition" "transformation" {
         },
         {
           name  = "DAGSTER_MAX_CONCURRENT_RUNS"
-          value = "3"
+          value = "1"
         },
         {
           name  = "SNOWFLAKE_SCHEMA"
           value = "DEFAULT"
         },
-        {
+        { # TODO Here, we'd like to send in the commit hash
           name  = "CODE_VERSION"
           value = "latest"
         },
-        {
+        { # TODO Figure out whether we need this?
           name  = "ENVIRONMENT"
           value = "prod"
         },
@@ -188,15 +221,24 @@ resource "aws_ecs_task_definition" "transformation" {
           name  = "DAGIT_BASE_URL"
           value = "https://dagster.${var.domain_name}"
         },
-        {
+        { # TODO Make the notification e-mail configurable
           name  = "NOTIFICATION_EMAILS"
           value = "info@sunray.ie"
+        },
+        {
+          name  = "SUNRAY_TENANT_ID"
+          value = var.tenant_id
         }
 
       ]
     }
   ])
 
+  tags = {
+    Tenant     = var.tenant_id
+    GithubOrg  = var.dbt_project.github.org
+    GithubRepo = var.dbt_project.github.repo
+  }
 }
 
 
@@ -205,7 +247,7 @@ data "aws_secretsmanager_secret" "dagster_db_secret" {
 }
 
 resource "aws_iam_role" "dagit_execution_role" {
-  name = "transformation-execution-role"
+  name = "dbt-project-role-${var.dbt_project}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -325,5 +367,10 @@ resource "aws_iam_role" "dagit_execution_role" {
     })
   }
 
+  tags = {
+    Tenant     = var.tenant_id
+    GithubOrg  = var.dbt_project.github.org
+    GithubRepo = var.dbt_project.github.repo
+  }
 
 }

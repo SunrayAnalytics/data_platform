@@ -27,7 +27,8 @@ resource "aws_instance" "bastion" {
     cpu_credits = "unlimited"
   }
   tags = {
-    Name = "${var.environment_name} - Bastion"
+    Name   = "${var.tenant_id} - Bastion"
+    Tenant = var.tenant_id
   }
 }
 
@@ -54,7 +55,8 @@ resource "aws_security_group" "bastion_security_group" {
   }
 
   tags = {
-    Name = "${var.environment_name} Bastion Security Group"
+    Name   = "${var.tenant_id} - Bastion Security Group"
+    Tenant = var.tenant_id
   }
 }
 

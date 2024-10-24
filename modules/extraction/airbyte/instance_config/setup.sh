@@ -16,19 +16,19 @@ aws secretsmanager get-secret-value --secret-id ${db_master_credentials_arn} --r
 export PGPASSWORD="$(jq -r '.password' .dbmastercredentials)"
 
 cat << EOF > bootstrap_db.sql
-CREATE USER airbyte PASSWORD '$${DATABASE_PASSWORD}';
+CREATE USER ${database_username} PASSWORD '$${DATABASE_PASSWORD}';
 
-CREATE DATABASE airbyte;
-CREATE DATABASE temporal;
-CREATE DATABASE temporal_visibility;
+CREATE DATABASE ${database_name} OWNER ${database_username};
+CREATE DATABASE temporal OWNER ${database_username};
+CREATE DATABASE temporal_visibility OWNER ${database_username};
 
-GRANT ALL PRIVILEGES ON DATABASE airbyte TO airbyte;
-GRANT ALL PRIVILEGES ON DATABASE temporal TO airbyte;
-GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO airbyte;
+GRANT ALL PRIVILEGES ON DATABASE ${database_name} TO ${database_username};
+GRANT ALL PRIVILEGES ON DATABASE temporal TO ${database_username};
+GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO ${database_username};
 
-ALTER DATABASE airbyte OWNER TO airbyte;
-ALTER DATABASE temporal OWNER TO airbyte;
-ALTER DATABASE temporal_visibility OWNER TO airbyte;
+ALTER DATABASE ${database_name} OWNER TO ${database_username};
+ALTER DATABASE temporal OWNER TO ${database_username};
+ALTER DATABASE temporal_visibility OWNER TO ${database_username};
 EOF
 
 mkdir -p temporal/dynamicconfig

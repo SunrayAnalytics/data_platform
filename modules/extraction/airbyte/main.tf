@@ -1,7 +1,9 @@
 #
 # Copyright (c) 2023. Sunray Analytics Ltd. All rights reserved
 #
-
+locals {
+  project_id = "${var.tenant_id}-${var.classifier}"
+}
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
@@ -10,7 +12,12 @@ data "aws_db_instance" "default" {
 }
 
 resource "aws_secretsmanager_secret" "airbyte_db_credentials" {
-  name_prefix = "airbyte-db"
+  name_prefix = "airbyte-db-${local.project_id}"
+
+  tags = {
+    Tenant     = var.tenant_id
+    Classifier = var.classifier
+  }
 }
 
 data "aws_secretsmanager_random_password" "airbyte_password" {
@@ -23,9 +30,9 @@ data "aws_secretsmanager_random_password" "airbyte_password" {
 resource "aws_secretsmanager_secret_version" "example" {
   secret_id = aws_secretsmanager_secret.airbyte_db_credentials.id
   secret_string = jsonencode({
-    username = "airbyte"
+    username = "airbyte_${var.classifier}"
     password = data.aws_secretsmanager_random_password.airbyte_password.random_password
-    database = "airbyte"
+    database = "airbyte_${var.classifier}"
     host     = data.aws_db_instance.default.address
     port     = data.aws_db_instance.default.port
 
@@ -42,6 +49,8 @@ data "template_file" "setup_sh" {
   vars = {
     database_host              = data.aws_db_instance.default.address
     database_port              = data.aws_db_instance.default.port
+    database_name              = "airbyte_${var.classifier}"
+    database_username          = "airbyte_${var.classifier}"
     master_username            = data.aws_db_instance.default.master_username
     db_master_credentials_arn  = data.aws_db_instance.default.master_user_secret[0].secret_arn
     db_airbyte_credentials_arn = aws_secretsmanager_secret.airbyte_db_credentials.arn
@@ -125,11 +134,12 @@ data "template_cloudinit_config" "foobar" {
 
 
 resource "aws_cloudwatch_log_group" "airbyte" {
-  name              = "/ec2/${var.environment_name}/airbyte/docker"
+  name              = "/ec2/${var.tenant_id}/${var.classifier}/airbyte/docker"
   retention_in_days = 30
   tags = {
-    Environment = var.environment_name
     Application = "airbyte"
+    Tenant      = var.tenant_id
+    Classifier  = var.classifier
   }
 }
 
@@ -161,7 +171,7 @@ resource "aws_autoscaling_group" "airbyte" {
 
   tag {
     key                 = "Name"
-    value               = "${var.environment_name} - Airbyte"
+    value               = "${var.tenant_id} - ${var.classifier} - Airbyte"
     propagate_at_launch = true
   }
 
@@ -171,9 +181,22 @@ resource "aws_autoscaling_group" "airbyte" {
     propagate_at_launch = true
   }
 
+  tag {
+    key                 = "Tenant"
+    value               = var.tenant_id
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "Classifier"
+    value               = var.classifier
+    propagate_at_launch = true
+  }
+
   lifecycle {
     ignore_changes = [target_group_arns]
   }
+
 }
 
 resource "aws_launch_template" "airbyte" {
@@ -207,14 +230,24 @@ resource "aws_launch_template" "airbyte" {
   }
 
   tags = {
-    Name = "${var.environment_name} - Airbyte"
+    Name        = "${var.tenant_id} - ${var.classifier} - Airbyte"
+    Application = "airbyte"
+    Tenant      = var.tenant_id
+    Classifier  = var.classifier
   }
 }
 
 
 resource "aws_iam_instance_profile" "airbyte_profile" {
-  name = "airbyte_profile"
+  name = "airbyte_profile_${local.project_id}"
   role = aws_iam_role.airbyte_role.name
+
+  tags = {
+    Name        = "${var.tenant_id} - ${var.classifier} - Airbyte"
+    Application = "airbyte"
+    Tenant      = var.tenant_id
+    Classifier  = var.classifier
+  }
 }
 
 data "aws_iam_policy_document" "assume_role" {
@@ -231,7 +264,7 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_role" "airbyte_role" {
-  name               = "airbyte_role"
+  name               = "airbyte_role_${local.project_id}"
   path               = "/"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
   inline_policy {
@@ -262,6 +295,13 @@ resource "aws_iam_role" "airbyte_role" {
         ]
       }
     )
+  }
+
+  tags = {
+    Name        = "${var.tenant_id} - ${var.classifier} - Airbyte"
+    Application = "airbyte"
+    Tenant      = var.tenant_id
+    Classifier  = var.classifier
   }
 }
 
@@ -298,11 +338,14 @@ resource "aws_security_group" "airbyte_security_group" {
   }
 
   tags = {
-    Name = "${var.environment_name} Airbyte Security Group"
+    Name        = "${var.tenant_id} - ${var.classifier} - Airbyte Security Group"
+    Application = "airbyte"
+    Tenant      = var.tenant_id
+    Classifier  = var.classifier
   }
 }
 
-resource "aws_security_group_rule" "allow_connections_from_airbyte" {
+resource "aws_security_group_rule" "db_allow_connections_from_airbyte" {
   type                     = "ingress"
   security_group_id        = var.db_security_group_id
   from_port                = 5432
@@ -311,3 +354,80 @@ resource "aws_security_group_rule" "allow_connections_from_airbyte" {
   source_security_group_id = aws_security_group.airbyte_security_group.id
 }
 
+resource "aws_lb_listener_rule" "static" {
+  listener_arn = var.load_balancer_listener_arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.airbyte.arn
+  }
+
+  condition {
+    host_header {
+      values = [aws_route53_record.airbyte.name]
+    }
+  }
+}
+
+data "aws_lb" "alb" {
+  arn = var.load_balancer_arn
+}
+
+data "aws_route53_zone" "selected" {
+  name         = "${var.domain_name}."
+  private_zone = false
+}
+resource "aws_route53_record" "airbyte" {
+  zone_id = data.aws_route53_zone.selected.zone_id
+  name    = "airbyte.${data.aws_route53_zone.selected.name}"
+  type    = "CNAME"
+  ttl     = "60"
+  records = [data.aws_lb.alb.dns_name]
+}
+
+resource "aws_autoscaling_attachment" "asg_attachment_bar" {
+  autoscaling_group_name = aws_autoscaling_group.airbyte.id
+  lb_target_group_arn    = aws_lb_target_group.airbyte.arn
+
+  lifecycle {
+    ignore_changes = [lb_target_group_arn, autoscaling_group_name]
+  }
+}
+resource "aws_security_group_rule" "allow_connections_from_airbyte" {
+  type                     = "ingress"
+  security_group_id        = aws_security_group.airbyte_security_group.id
+  from_port                = 8000
+  to_port                  = 8000
+  protocol                 = "tcp"
+  source_security_group_id = var.load_balancer_security_group
+}
+
+resource "aws_security_group_rule" "airbyte_allow_ecs_service" {
+  type                     = "ingress"
+  security_group_id        = aws_security_group.airbyte_security_group.id
+  from_port                = 8000
+  to_port                  = 8000
+  protocol                 = "tcp"
+  source_security_group_id = var.ecs_service_security_group
+}
+
+# These below here are specific for aibyte
+resource "aws_lb_target_group" "airbyte" {
+  name        = "ab-tg-${local.project_id}"
+  port        = 8000
+  protocol    = "HTTP"
+  vpc_id      = var.vpc.vpc_id
+  target_type = "instance"
+  health_check {
+    matcher = "200-499"
+    path    = "/api/v1/health"
+  }
+
+  tags = {
+    Name        = "${var.tenant_id} - ${var.classifier} - Airbyte"
+    Application = "airbyte"
+    Tenant      = var.tenant_id
+    Classifier  = var.classifier
+  }
+}

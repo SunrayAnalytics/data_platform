@@ -1,8 +1,8 @@
 #/bin/bash
 set -e -x
 
-AIRBYTE_INSTANCE_ID=i-0abaa101252a2e7da
-AIRBYTE_INSTANCE_IP=10.0.5.190
+AIRBYTE_INSTANCE_ID=i-0030d9a6e80e18e8e
+AIRBYTE_INSTANCE_IP=10.0.1.78
 aws ec2-instance-connect send-ssh-public-key \
     --ssh-public-key "file://~/.ssh/id_ed25519.pub" \
     --instance-id $(terraform output -json | jq -r ".bastion_instance_id.value") \

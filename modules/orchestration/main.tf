@@ -1,25 +1,38 @@
 resource "aws_ecs_cluster" "sunray_data" {
-  name = "sunray-data"
+  name = "sunray-data-${var.tenant_id}"
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
+  }
 }
 
 resource "aws_service_discovery_private_dns_namespace" "dns_namespace" {
-  name        = "data.sunray.local"
+  name        = "${var.tenant_id}.data.sunray.local"
   description = "DNS Namepace"
   vpc         = var.vpc.vpc_id
+
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
+  }
 }
 
 resource "aws_ecr_repository" "dagit" {
-  name                 = "dagit"
+  name                 = "dagit-${var.tenant_id}"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = false
   }
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
+  }
 }
 
 resource "aws_s3_bucket" "dagster_logs" {
-  bucket        = "sunray-dagster-logs"
+  bucket        = "sunray-dagster-logs-${var.tenant_id}"
   force_destroy = true
 }
 
@@ -31,14 +44,20 @@ resource "aws_s3_bucket" "dagster_logs" {
 # }
 
 resource "aws_ecr_repository" "transformation" {
-  name                 = "transformation-base"
+  name                 = "dbt_project_base_${var.tenant_id}"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = false
   }
+
+  tags = {
+    Application = "dbt_project"
+    Tenant      = var.tenant_id
+  }
 }
+
 resource "aws_s3_bucket_ownership_controls" "dagster_logs" {
   bucket = aws_s3_bucket.dagster_logs.id
   rule {
@@ -47,7 +66,7 @@ resource "aws_s3_bucket_ownership_controls" "dagster_logs" {
 }
 
 resource "aws_security_group" "ecs_service" {
-  name   = "ecs_service"
+  name   = "ecs_service-${var.tenant_id}"
   vpc_id = var.vpc.vpc_id
 
   egress {
@@ -56,6 +75,10 @@ resource "aws_security_group" "ecs_service" {
     protocol         = "-1"
     cidr_blocks      = ["0.0.0.0/0"] # TODO Only allow outbound to private subnets
     ipv6_cidr_blocks = ["::/0"]
+  }
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
   }
 }
 
@@ -77,17 +100,13 @@ resource "aws_security_group_rule" "database_allow_ecs_service" {
   source_security_group_id = aws_security_group.ecs_service.id
 }
 
-resource "aws_security_group_rule" "airbyte_allow_ecs_service" {
-  type                     = "ingress"
-  security_group_id        = var.airbyte_security_group_id
-  from_port                = 8000
-  to_port                  = 8000
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.ecs_service.id
-}
-
 resource "aws_secretsmanager_secret" "dagster_db_credentials" {
-  name_prefix = "dagster-db"
+  name = "dagster-db-${var.tenant_id}"
+
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
+  }
 }
 
 data "aws_secretsmanager_random_password" "dagster_password" {
@@ -104,9 +123,9 @@ data "aws_db_instance" "default" {
 resource "aws_secretsmanager_secret_version" "dagster" {
   secret_id = aws_secretsmanager_secret.dagster_db_credentials.id
   secret_string = jsonencode({
-    username = "dagster"
+    username = "dagster_${var.tenant_id}"
     password = data.aws_secretsmanager_random_password.dagster_password.random_password
-    database = "dagster"
+    database = "dagster_${var.tenant_id}"
     host     = data.aws_db_instance.default.address
     port     = data.aws_db_instance.default.port
 
@@ -133,18 +152,33 @@ resource "aws_secretsmanager_secret_version" "dagster" {
 #
 # GRANT ROLE ETL TO USER SYS_DBT;
 
+module "airbyte" {
+  for_each   = { for index, val in toset(var.airbyte_instances) : val.classifier => val }
+  source     = "../extraction/airbyte"
+  tenant_id  = var.tenant_id
+  classifier = each.key
+
+  vpc                        = var.vpc
+  db_instance_id             = var.db_instance_id
+  db_security_group_id       = var.db_security_group_id
+  airbyte_instance_type      = each.value.instance_type
+  ecs_service_security_group = aws_security_group.ecs_service.id
+
+  load_balancer_arn            = var.load_balancer_arn
+  load_balancer_listener_arn   = var.load_balancer_listener_arn
+  load_balancer_security_group = var.load_balancer_security_group
+
+  domain_name = var.domain_name
+}
+
 module "dbt_project" {
   for_each = { for index, val in toset(var.dbt_projects) : "${val.github.org}-${val.github.repo}" => val }
   source   = "../dbt_project"
   vpc      = var.vpc
 
   # Shared resources variables
-  db_instance_id               = var.db_instance_id
-  db_security_group_id         = var.db_security_group_id
-  airbyte_security_group_id    = var.airbyte_security_group_id
-  load_balancer_arn            = var.load_balancer_arn
-  load_balancer_listener_arn   = var.load_balancer_listener_arn
-  load_balancer_security_group = var.load_balancer_security_group
+  db_instance_id       = var.db_instance_id
+  db_security_group_id = var.db_security_group_id
 
   # Coming from this stack
   private_dns_namespace  = aws_service_discovery_private_dns_namespace.dns_namespace.id
@@ -155,6 +189,7 @@ module "dbt_project" {
   domain_name = var.domain_name
   dbt_project = each.value
 
+  tenant_id           = var.tenant_id
   dagster_db_secret   = aws_secretsmanager_secret.dagster_db_credentials.id
   dagster_logs_bucket = aws_s3_bucket.dagster_logs.id
 }

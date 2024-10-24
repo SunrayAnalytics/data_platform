@@ -7,7 +7,7 @@ output "vpc_id" {
 }
 
 output "availability_zone_names" {
-  value = [for zone in data.aws_availability_zones.available.names : zone]
+  value = [for zone in local.selected_azs : zone]
 }
 
 output "private_subnet_ids" {

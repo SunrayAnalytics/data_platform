@@ -1,13 +1,21 @@
+locals {
+  dagit_docker_tag = "latest"
+}
 
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 resource "aws_lb_target_group" "dagit_target_group" {
-  name        = "dagit-target-group"
+  name        = "dagit-target-group-${var.tenant_id}"
   port        = 80
   protocol    = "HTTP"
   vpc_id      = var.vpc.vpc_id
   target_type = "ip"
+
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
+  }
 }
 
 resource "aws_lb_listener_rule" "dagster_rule" {
@@ -24,6 +32,10 @@ resource "aws_lb_listener_rule" "dagster_rule" {
     host_header {
       values = [aws_route53_record.dagster.name]
     }
+  }
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
   }
 }
 
@@ -45,20 +57,16 @@ resource "aws_route53_record" "dagster" {
 }
 
 resource "aws_cloudwatch_log_group" "dagit" {
-  name              = "/ecs/task/dagit"
+  name              = "/ecs/task/${var.tenant_id}/dagit"
   retention_in_days = 30
 }
 resource "aws_cloudwatch_log_group" "dagster_deamon" {
-  name              = "/ecs/task/dagster-daemon"
+  name              = "/ecs/task/${var.tenant_id}/dagster-daemon"
   retention_in_days = 30
 }
 
-locals {
-  dagit_docker_tag = "latest"
-}
-
 resource "aws_ecs_task_definition" "service" {
-  family                   = "dagit"
+  family                   = "dagit-${var.tenant_id}"
   execution_role_arn       = aws_iam_role.dagit_execution_role.arn
   task_role_arn            = aws_iam_role.dagit_execution_role.arn
   requires_compatibilities = ["FARGATE"]
@@ -118,6 +126,10 @@ resource "aws_ecs_task_definition" "service" {
         {
           name  = "DAGSTER_MAX_CONCURRENT_RUNS"
           value = "3"
+        },
+        {
+          name  = "SUNRAY_TENANT_ID"
+          value = var.tenant_id
         }
       ]
     },
@@ -172,23 +184,23 @@ resource "aws_ecs_task_definition" "service" {
         {
           name  = "LB_DNS_NAME"
           value = "main_pipeline_production.data.sunray.local"
+        },
+        {
+          name  = "SUNRAY_TENANT_ID"
+          value = var.tenant_id
         }
       ]
     }
   ])
 
-  #   volume {
-  #     name      = "service-storage"
-  #     host_path = "/ecs/service-storage"
-  #   }
-  #
-  #   placement_constraints {
-  #     type       = "memberOf"
-  #     expression = "attribute:ecs.availability-zone in [us-west-2a, us-west-2b]"
-  #   }
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
+  }
 }
+
 resource "aws_iam_role" "dagit_execution_role" {
-  name = "dagit-execution-role"
+  name = "dagit-execution-role-${var.tenant_id}"
 
   # Terraform's "jsonencode" function converts a
   # Terraform expression result to valid JSON syntax.
@@ -257,12 +269,21 @@ resource "aws_iam_role" "dagit_execution_role" {
       ]
     })
   }
+
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
+  }
 }
 
 
 resource "aws_security_group" "dagster_security_group" {
-  name   = "dagster_security_group"
+  name   = "dagster_security_group-${var.tenant_id}"
   vpc_id = var.vpc.vpc_id
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
+  }
 }
 
 resource "aws_security_group_rule" "dagster_allow_inbound_from_elb" {
@@ -275,7 +296,7 @@ resource "aws_security_group_rule" "dagster_allow_inbound_from_elb" {
 }
 
 resource "aws_ecs_service" "dagit_service" {
-  name            = "dagit-service"
+  name            = "dagit-service-${var.tenant_id}"
   cluster         = aws_ecs_cluster.sunray_data.id
   task_definition = aws_ecs_task_definition.service.id
   desired_count   = 1
@@ -288,5 +309,9 @@ resource "aws_ecs_service" "dagit_service" {
     container_name   = "dagit"
     container_port   = 3000
     target_group_arn = aws_lb_target_group.dagit_target_group.arn
+  }
+  tags = {
+    Application = "dagster"
+    Tenant      = var.tenant_id
   }
 }

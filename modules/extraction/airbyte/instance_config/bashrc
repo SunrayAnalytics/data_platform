@@ -15,8 +15,8 @@ export DATABASE_USER=$(jq -r '.username' .dbcredentials )
 export DATABASE_PASSWORD=$(jq -r '.password' .dbcredentials)
 export DATABASE_HOST=$(jq -r '.host' .dbcredentials)
 export DATABASE_PORT=$(jq -r '.port' .dbcredentials)
-export DATABASE_DB=airbyte
-export DATABASE_URL="jdbc:postgresql://$(jq -r '.host' .dbcredentials):$(jq -r '.port' .dbcredentials)/airbyte"
+export DATABASE_DB=$(jq -r '.database' .dbcredentials)
+export DATABASE_URL="jdbc:postgresql://$(jq -r '.host' .dbcredentials):$(jq -r '.port' .dbcredentials)/$(jq -r '.database' .dbcredentials)"
 
 # TODO Get airbyte credentials here as well
 export BASIC_AUTH_USERNAME=admin

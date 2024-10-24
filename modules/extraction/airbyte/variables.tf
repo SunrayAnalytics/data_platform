@@ -10,14 +10,8 @@ variable "vpc" {
   })
 }
 
-variable "environment_name" {
-  description = "The environment makes the resources distinguishable from others and is used for naming resources"
-  type        = string
-}
-
 variable "airbyte_instance_type" {
   type        = string
-  default     = "t3.medium"
   description = "The ec2 size of the airbyte instance"
 }
 
@@ -29,3 +23,30 @@ variable "db_instance_id" {
   type = string
 }
 
+variable "load_balancer_arn" {
+  type = string
+}
+
+variable "load_balancer_listener_arn" {
+  type = string
+}
+
+variable "load_balancer_security_group" {
+  type = string
+}
+
+variable "domain_name" {
+  type = string
+}
+
+variable "tenant_id" {
+  type = string
+}
+
+variable "classifier" {
+  type = string
+}
+
+variable "ecs_service_security_group" {
+  type = string
+}

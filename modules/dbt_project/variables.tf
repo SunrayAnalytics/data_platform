@@ -1,3 +1,7 @@
+variable "tenant_id" {
+  type = string
+}
+
 variable "vpc" {
   type = object({
     availability_zone_names = list(string)
@@ -21,22 +25,6 @@ variable "db_instance_id" {
 }
 
 variable "db_security_group_id" {
-  type = string
-}
-
-variable "airbyte_security_group_id" {
-  type = string
-}
-
-variable "load_balancer_arn" {
-  type = string
-}
-
-variable "load_balancer_listener_arn" {
-  type = string
-}
-
-variable "load_balancer_security_group" {
   type = string
 }
 

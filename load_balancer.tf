@@ -4,15 +4,19 @@
 
 # Create an internal load balancer (as it is)
 resource "aws_lb" "default" {
-  name            = "lb"
+  name            = "lb-${var.tenant_id}"
   internal        = false
   subnets         = module.vpc.public_subnet_ids
   security_groups = [aws_security_group.lb.id]
+
+  tags = {
+    Tenant = var.tenant_id
+  }
 }
 
 # This is the load balancer security group, here we have to add rules for all incoming ports
 resource "aws_security_group" "lb" {
-  name   = "alb-security-group"
+  name   = "alb-security-group-${var.tenant_id}"
   vpc_id = module.vpc.vpc_id
 
   ingress {
@@ -37,42 +41,6 @@ resource "aws_security_group" "lb" {
   }
 }
 
-resource "aws_security_group_rule" "allow_connections_from_airbyte" {
-  type                     = "ingress"
-  security_group_id        = module.airbyte.airbyte_security_group_id
-  from_port                = 8000
-  to_port                  = 8000
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.lb.id
-}
-
-# These below here are specific for aibyte
-resource "aws_lb_target_group" "airbyte" {
-  name        = "airbyte-target-group"
-  port        = 8000
-  protocol    = "HTTP"
-  vpc_id      = module.vpc.vpc_id
-  target_type = "instance"
-  health_check {
-    matcher = "200-499"
-    path    = "/api/v1/health"
-  }
-}
-
-resource "aws_lb_listener" "airbyte" {
-  load_balancer_arn = aws_lb.default.id
-  port              = "80"
-  protocol          = "HTTP"
-  default_action {
-    type = "redirect"
-
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-}
 
 resource "aws_lb_listener" "secure_listener" {
   load_balancer_arn = aws_lb.default.arn
@@ -90,30 +58,8 @@ resource "aws_lb_listener" "secure_listener" {
       status_code  = "200"
     }
   }
-}
-
-resource "aws_lb_listener_rule" "static" {
-  listener_arn = aws_lb_listener.secure_listener.arn
-  priority     = 100
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.airbyte.arn
-  }
-
-  condition {
-    host_header {
-      values = [aws_route53_record.airbyte.name]
-    }
-  }
-}
-
-resource "aws_autoscaling_attachment" "asg_attachment_bar" {
-  autoscaling_group_name = module.airbyte.airbyte_autoscaling_group_id
-  lb_target_group_arn    = aws_lb_target_group.airbyte.arn
-
-  lifecycle {
-    ignore_changes = [lb_target_group_arn, autoscaling_group_name]
+  tags = {
+    Tenant = var.tenant_id
   }
 }
 
@@ -122,13 +68,6 @@ data "aws_route53_zone" "selected" {
   private_zone = false
 }
 
-resource "aws_route53_record" "airbyte" {
-  zone_id = data.aws_route53_zone.selected.zone_id
-  name    = "airbyte.${data.aws_route53_zone.selected.name}"
-  type    = "CNAME"
-  ttl     = "60"
-  records = [aws_lb.default.dns_name]
-}
 
 resource "aws_route53_record" "dataplatform" {
   zone_id = data.aws_route53_zone.selected.zone_id
@@ -143,7 +82,7 @@ resource "aws_acm_certificate" "cert" {
   validation_method = "DNS"
 
   tags = {
-    Environment = "test"
+    Tenant = var.tenant_id
   }
 
   lifecycle {
@@ -172,4 +111,19 @@ resource "aws_route53_record" "example" {
 resource "aws_acm_certificate_validation" "example" {
   certificate_arn         = aws_acm_certificate.cert.arn
   validation_record_fqdns = [for record in aws_route53_record.example : record.fqdn]
+}
+
+resource "aws_lb_listener" "airbyte" {
+  load_balancer_arn = aws_lb.default.arn
+  port              = "80"
+  protocol          = "HTTP"
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
 }

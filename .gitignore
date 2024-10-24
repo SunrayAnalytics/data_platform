@@ -1,8 +1,12 @@
 .idea
 state
 .terraform.lock.hcl
+**/.terraform.lock.hcl
 # Local .terraform directories
 **/.terraform/*
+
+docs/plantuml-*.jar
+docs/_build
 
 # .tfstate files
 *.tfstate
