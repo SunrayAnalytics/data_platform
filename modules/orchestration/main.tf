@@ -31,16 +31,39 @@ resource "aws_ecr_repository" "dagit" {
   }
 }
 
+# data "template_file" "workspace_yaml" {
+#   template = file("${path.module}/workspace.yaml.tftpl")
+#   vars = {
+#     deployments =
+#   }
+# }
+
+locals { # TODO Add airbyte stuff here as well
+  dagster_deployments = [for _, dep in module.dbt_project : dep.dagster_deployment]
+}
 resource "terraform_data" "run_dagit_docker_build_push" {
   # When do we need to update this (is it when commit hash changes?)
   triggers_replace = [
+    local.dagster_deployments
   ]
 
   provisioner "local-exec" {
     command = "modules/orchestration/bin/build_docker.sh && modules/orchestration/bin/push_docker.sh"
     environment = {
       DockerRepository = aws_ecr_repository.dagit.repository_url
+      CONFIG_FILE = yamlencode({
+
+        load_from = [for deployment in local.dagster_deployments : {
+          grpc_server = {
+            host          = deployment.dns_name
+            port          = 4000
+            location_name = deployment.identifier
+          }
+          }
+        ]
+      })
     }
+
   }
   depends_on = [aws_ecr_repository.dagit]
 }

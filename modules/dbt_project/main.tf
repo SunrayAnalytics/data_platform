@@ -3,7 +3,7 @@ data "aws_region" "current" {}
 
 locals {
   # Generate a fixed length project-id
-  project_id = base64sha256("${var.tenant_id}/${var.dbt_project.github.org}/${var.dbt_project.github.repo}")
+  project_id = md5("${var.tenant_id}/${var.dbt_project.github.org}/${var.dbt_project.github.repo}")
 }
 
 resource "aws_secretsmanager_secret" "snowflake_db_credentials" {
@@ -56,7 +56,7 @@ resource "aws_ecr_repository" "dbt_project_repository" {
   }
 }
 
-resource "aws_service_discovery_service" "example" {
+resource "aws_service_discovery_service" "dns_name" {
   name = "dbt_proj-${local.project_id}" # TODO This has to be amended if we're going multitenant
 
   dns_config {
@@ -97,7 +97,7 @@ resource "aws_ecs_service" "transformation_service" {
     security_groups = [var.service_security_group]
   }
   service_registries {
-    registry_arn = aws_service_discovery_service.example.arn
+    registry_arn = aws_service_discovery_service.dns_name.arn
     port         = 4000
   }
   tags = {
@@ -252,7 +252,7 @@ data "aws_secretsmanager_secret" "dagster_db_secret" {
 }
 
 resource "aws_iam_role" "dagit_execution_role" {
-  name = "dbt-project-role-${var.dbt_project}"
+  name = "dbt-project-role-${local.project_id}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

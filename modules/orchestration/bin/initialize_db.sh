@@ -1,7 +1,10 @@
-#/bin/bash
-set -x -e
+#!/bin/bash
+
+set -e
+
 # BASTION_INSTANCE_ID
 # DOMAIN_NAME
+# TODO Do not hardcode the name of the ssh-key like this
 aws ec2-instance-connect send-ssh-public-key \
     --ssh-public-key "file://${HOME}/.ssh/id_ed25519.pub" \
     --instance-id ${BASTION_INSTANCE_ID} \

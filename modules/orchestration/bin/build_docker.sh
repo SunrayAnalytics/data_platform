@@ -4,6 +4,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 pushd "$SCRIPT_DIR"/..
 
+echo "$CONFIG_FILE" > workspace.yaml
 #if [[ $( git status --porcelain . | wc -l) != "0" ]]; then
 #    echo "This checkout is dirty refusing to build"
 #    exit 1
@@ -17,7 +18,6 @@ echo "Reading the repository URL from the stack"
 CurrentRevision=$(git rev-parse --short HEAD)
 
 echo "Getting buildtime secrets"
-ls ../../
 cp ../../pip_constraints.txt ./
 echo "Building ${DockerRepository}:${CurrentRevision}"
 docker build \

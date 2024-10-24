@@ -14,6 +14,6 @@ output "domain_name" {
   value = var.domain_name
 }
 
-output "dbt_ecr_repos" {
-  value = module.orchestration.dbt_repositories
+output "project_configuration" {
+  value = module.orchestration.project_configuration
 }

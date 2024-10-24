@@ -7,7 +7,7 @@ COPY ../../pip_constraints.txt  /opt/dagster/app
 RUN pip install dagit dagster-postgres dagster-aws -c /opt/dagster/app/pip_constraints.txt
 
 # Copy your code and workspace to /opt/dagster/app
-COPY workspace.yaml /opt/dagster/app/
+COPY workspace.yaml.example /opt/dagster/app/
 
 ENV DAGSTER_HOME=/opt/dagster/dagster_home/
 

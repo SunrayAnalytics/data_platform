@@ -39,7 +39,7 @@ data "aws_iam_policy_document" "instance_assume_role_policy" {
 
 # TODO This needs shortening
 resource "aws_iam_role" "github_oidc_role" {
-  name               = "gb-${var.tenant_id}-${var.dbt_project.github.org}-${var.dbt_project.github.repo}-oidc"
+  name               = "github-${local.project_id}-oidc"
   path               = "/"
   assume_role_policy = data.aws_iam_policy_document.instance_assume_role_policy.json
   tags = {

@@ -30,7 +30,17 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE }}
           role-session-name: oidc-role
           aws-region: ${{ vars.AWS_DEFAULT_REGION }}
-
+      - name: Fetch Settings
+        id: project_settings
+        run: |
+          echo "ecr_repository_url=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/ecr_repository_url | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
+          echo "snowflake_secret=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/snowflake_secret | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
+          echo "service_name=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/service_name | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
+          echo "dbt_project_base_image=$(aws ssm get-parameter --name ${PLATFORM_PREFIX}/dbt_project_base_image | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
+          echo "cluster_name=$(aws ssm get-parameter --name ${PLATFORM_PREFIX}/cluster_name | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
+        env:
+          PLATFORM_PREFIX: "/data_platform/${{vars.TENANT_ID}}"
+          PROJECT_PREFIX: "/data_platform/${{vars.TENANT_ID}}/dbt_project/${{ github.event.repository.owner.name }}/${{ github.event.repository.name }}"
       - name: List Files
         run: |
           ls -R
@@ -90,14 +100,14 @@ jobs:
             --build-arg SNOWFLAKE_WAREHOUSE=$SnowflakeWarehouse \
             .
         env:
-          DockerRepository: ${{ vars.ECR_REPOSITORY_URL }}
-          SecretKey: ${{ vars.SNOWFLAKE_SECRET }}
+          DockerRepository: ${{ steps.project_settings.outputs.ecr_repository_url }}
+          SecretKey: ${{ steps.project_settings.outputs.snowflake_secret }}
           CurrentRevision: ${{ github.sha }}
-          BASE_IMAGE: 184065244952.dkr.ecr.eu-west-1.amazonaws.com/transformation-base:latest # TODO Set the current version of this repository here
+          BASE_IMAGE: ${{ steps.project_settings.outputs.dbt_project_base_image }}:latest # TODO Set the current version of this repository here
       - name: Push Image # TODO Get the repo, and the snowflake secret
         env:
-          DockerRepository: ${{ vars.ECR_REPOSITORY_URL }}
-          SNOWFLAKE_SECRET: ${{ vars.SNOWFLAKE_SECRET }}
+          DockerRepository: ${{ steps.project_settings.outputs.ecr_repository_url }}
+          SNOWFLAKE_SECRET: ${{ steps.project_settings.outputs.snowflake_secret }}
           CurrentRevision: ${{ github.sha }}
         run: |
           set -e
@@ -111,7 +121,7 @@ jobs:
           docker push ${DockerRepository}:latest
       - name: Update Service
         run: |
-          aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --force-new-deployment
-        env: # TODO: All these must come from configuration
-          CLUSTER: sunray-data
-          SERVICE: transformation-service
+          aws ecs update-service --cluster ${CLUSTER} --service ${SERVICE} --force-new-deployment --desired-count 1
+        env:
+          CLUSTER: ${{ steps.project_settings.outputs.cluster_name }}
+          SERVICE: ${{ steps.project_settings.outputs.service_name }}
