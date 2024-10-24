@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -e -x
 
 #CFN_EXPORTS=$(aws cloudformation list-exports | jq '.Exports | map({"key": .Name, "value": .Value}) | from_entries')
 #DockerRepository=$(echo "$CFN_EXPORTS" | jq -r '."DagitRepositoryUri-transform"')

@@ -31,13 +31,6 @@ resource "aws_ecr_repository" "dagit" {
   }
 }
 
-# data "template_file" "workspace_yaml" {
-#   template = file("${path.module}/workspace.yaml.tftpl")
-#   vars = {
-#     deployments =
-#   }
-# }
-
 locals { # TODO Add airbyte stuff here as well
   dagster_deployments = [for _, dep in module.dbt_project : dep.dagster_deployment]
 }

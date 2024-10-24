@@ -33,11 +33,11 @@ jobs:
       - name: Fetch Settings
         id: project_settings
         run: |
-          echo "ecr_repository_url=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/ecr_repository_url | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
-          echo "snowflake_secret=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/snowflake_secret | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
-          echo "service_name=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/service_name | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
-          echo "dbt_project_base_image=$(aws ssm get-parameter --name ${PLATFORM_PREFIX}/dbt_project_base_image | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
-          echo "cluster_name=$(aws ssm get-parameter --name ${PLATFORM_PREFIX}/cluster_name | jq -r '.Parameter.Name')" >> $GITHUB_OUTPUT
+          echo "ecr_repository_url=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/ecr_repository_url | jq -r '.Parameter.Value')" >> $GITHUB_OUTPUT
+          echo "snowflake_secret=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/snowflake_secret | jq -r '.Parameter.Value')" >> $GITHUB_OUTPUT
+          echo "service_name=$(aws ssm get-parameter --name ${PROJECT_PREFIX}/service_name | jq -r '.Parameter.Value')" >> $GITHUB_OUTPUT
+          echo "dbt_project_base_image=$(aws ssm get-parameter --name ${PLATFORM_PREFIX}/dbt_project_base_image | jq -r '.Parameter.Value')" >> $GITHUB_OUTPUT
+          echo "cluster_name=$(aws ssm get-parameter --name ${PLATFORM_PREFIX}/cluster_name | jq -r '.Parameter.Value')" >> $GITHUB_OUTPUT
         env:
           PLATFORM_PREFIX: "/data_platform/${{vars.TENANT_ID}}"
           PROJECT_PREFIX: "/data_platform/${{vars.TENANT_ID}}/dbt_project/${{ github.event.repository.owner.name }}/${{ github.event.repository.name }}"
