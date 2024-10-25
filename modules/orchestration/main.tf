@@ -31,8 +31,11 @@ resource "aws_ecr_repository" "dagit" {
   }
 }
 
-locals { # TODO Add airbyte stuff here as well
-  dagster_deployments = [for _, dep in module.dbt_project : dep.dagster_deployment]
+locals {
+  dagster_deployments = concat(
+    [for _, dep in module.dbt_project : dep.dagster_deployment],
+    [for _, dep in module.airbyte : dep.dagster_deployment]
+  )
 }
 resource "terraform_data" "run_dagit_docker_build_push" {
   # When do we need to update this (is it when commit hash changes?)
@@ -48,7 +51,7 @@ resource "terraform_data" "run_dagit_docker_build_push" {
 
         load_from = [for deployment in local.dagster_deployments : {
           grpc_server = {
-            host          = deployment.dns_name
+            host          = "${deployment.dns_name}.${aws_service_discovery_private_dns_namespace.dns_namespace.name}"
             port          = 4000
             location_name = deployment.identifier
           }
@@ -202,11 +205,22 @@ module "airbyte" {
   tenant_id  = var.tenant_id
   classifier = each.key
 
-  vpc                        = var.vpc
-  db_instance_id             = var.db_instance_id
-  db_security_group_id       = var.db_security_group_id
-  airbyte_instance_type      = each.value.instance_type
+  # Client provided settings
+  airbyte_instance_type = each.value.instance_type
+
+  vpc                  = var.vpc
+  db_instance_id       = var.db_instance_id
+  db_security_group_id = var.db_security_group_id
+
+  airbyte_ecr_repository = aws_ecr_repository.airbyte.repository_url
+  private_dns_namespace  = aws_service_discovery_private_dns_namespace.dns_namespace.id
+  cluster_id             = aws_ecs_cluster.sunray_data.id
+  service_security_group = aws_security_group.ecs_service.id
+  dagster_db_secret      = aws_secretsmanager_secret.dagster_db_credentials.id
+  dagster_logs_bucket    = aws_s3_bucket.dagster_logs.id
+
   ecs_service_security_group = aws_security_group.ecs_service.id
+
 
   load_balancer_arn            = var.load_balancer_arn
   load_balancer_listener_arn   = var.load_balancer_listener_arn

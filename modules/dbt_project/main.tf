@@ -7,7 +7,7 @@ locals {
 }
 
 resource "aws_secretsmanager_secret" "snowflake_db_credentials" {
-  name = "snowflake-db-${local.project_id}"
+  name_prefix = "snowflake-db-${local.project_id}-"
 
   tags = {
     Tenant     = var.tenant_id
@@ -234,7 +234,6 @@ resource "aws_ecs_task_definition" "transformation" {
           name  = "SUNRAY_TENANT_ID"
           value = var.tenant_id
         }
-
       ]
     }
   ])

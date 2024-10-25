@@ -1,0 +1,15 @@
+# TODO: see if this can be slimmed down.
+snowflake-connector-python
+boto3
+Jinja2
+dagster
+dagster-airbyte
+dagster-aws
+#dagster-dbt
+dagster-postgres
+#dagster-docker
+dagster-duckdb
+dagster-duckdb-pandas
+#dagster-snowflake-pandas
+dagster-snowflake
+dbt-snowflake

@@ -15,10 +15,30 @@ variable "airbyte_instance_type" {
   description = "The ec2 size of the airbyte instance"
 }
 
-variable "db_security_group_id" {
+variable "airbyte_ecr_repository" {
+  type        = string
+  description = "The url to the ECR repository that contains the reusable airbyte image"
+}
+variable "private_dns_namespace" {
+  type = string
+}
+variable "cluster_id" {
+  type = string
+}
+variable "service_security_group" {
+  type = string
+}
+variable "dagster_logs_bucket" {
+  type = string
+}
+variable "dagster_db_secret" {
   type = string
 }
 
+
+variable "db_security_group_id" {
+  type = string
+}
 variable "db_instance_id" {
   type = string
 }

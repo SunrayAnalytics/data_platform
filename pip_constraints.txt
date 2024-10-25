@@ -23,6 +23,7 @@ dagster-duckdb==0.19.10
 dagster-duckdb-pandas==0.19.10
 dagster-postgres==0.19.10
 dagster-snowflake==0.19.10
+dagster-snowflake-pandas-0.19.10
 dbt-core==1.4.6
 dbt-extractor==0.4.1
 dbt-snowflake==1.4.1

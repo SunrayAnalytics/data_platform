@@ -1,7 +1,0 @@
-load_from:
-%{ for deployment in deployments ~}
-  - grpc_server:
-      host: ${deployment.dns_name}
-      port: 4000
-      location_name: ${deployment.identifier}
-%{ endfor ~}
